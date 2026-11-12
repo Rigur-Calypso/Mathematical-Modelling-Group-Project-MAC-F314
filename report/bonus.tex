@@ -1,20 +1,39 @@
 \section{Bonus study of parameter estimation with a PINN}
 \label{sec:bonus}
 
+\subsection{What this section is for, and how to read its result}
+\label{sec:bonus-frame}
+
+The core report solves the \emph{forward} problem: given parameters, predict voltage. This section
+reverses it. Given only noisy voltage readings, and treating the recovery variable \(w\) as
+unobservable --- which it is in any real recording --- can the model's parameter be recovered?
+
+We answer it twice, with a physics-informed neural network and with a classical least-squares fit,
+and we state the expected outcome in advance. Both methods are given the same governing equations
+and the same initial state, including the unmeasurable \(w_0\). The least-squares baseline has only
+a single scalar to search, with the true model integrated at every trial value, so on this
+synthetic problem it is the stronger of the two by construction. It should win, and it does.
+
+The comparison is therefore not a contest but a \textbf{benchmark}: least squares is the empirical
+reference point for this experiment, and the quantity of interest is how close a network that must
+simultaneously learn two state trajectories comes to it. A PINN landing within a small factor of
+that reference is evidence that the implementation is correct. Section~\ref{sec:bonus-value}
+returns to the assumptions the baseline relies on and to the settings in which they would not hold.
+
 \subsection{Inverse problem and synthetic data}
 
 The core simulations use known parameters to predict voltage. Here we reverse the problem and estimate \(a\) from voltage readings alone. We fix \(b=0.80\) and \(\varepsilon=0.08\), supply the current and initial state, and treat recovery \(w\) as unobserved during fitting. The data come from the FHN equations with \(a_{\mathrm{true}}=0.70\), so the parameter error can be measured directly.
 
 We generated clean reference trajectories on \([0,40]\) at intervals of \(0.10\), using DOP853 with relative and absolute tolerances of \(10^{-11}\) and \(10^{-13}\). For the clean training set, we kept every fourth voltage sample, giving 101 observations. For the sparse, noisy set, we chose one positive-time sample per block of ten and added Gaussian noise with standard deviation \(0.03\), giving 40 observations. The two sets sample the same training trajectory.
 
-Training used \(I=0.50\) and \((v_0,w_0)=(-1.15,-0.62)\). Validation used \(I=0.65\) and \((-1.00,-0.55)\). The final test used \(I=0.90\) and \((-1.20,-0.70)\). Only training observations entered either fit.
-
 \begin{figure}[H]
   \centering
-  \includegraphics[width=0.83\linewidth]{figures/pinn_training_observations.pdf}
+  \includegraphics[width=0.70\linewidth]{figures/pinn_training_observations.pdf}
   \caption{The two training datasets. Dots are the supplied observations and the gray curve is the clean numerical reference.}
   \label{fig:pinn-data}
 \end{figure}
+
+Training used \(I=0.50\) and \((v_0,w_0)=(-1.15,-0.62)\). Validation used \(I=0.65\) and \((-1.00,-0.55)\). The final test used \(I=0.90\) and \((-1.20,-0.70)\). Only training observations entered either fit.
 
 \clearpage
 
@@ -119,3 +138,74 @@ Both methods recovered \(a\) closely from clean readings. For the noisy datasets
 At a fixed set of observation times, adding noise raised the test error in every trial for both methods. With noisy readings, reducing the sample count increased the error in three of five least-squares pairs and four of five PINN pairs. The effect of the sample count therefore depended on which readings were retained and on their noise values. For example, least squares had a lower group median with 40 noisy readings even though its median \emph{paired change} was positive. The paired change is calculated by subtracting errors seed by seed before taking the median.
 
 These comparisons summarize five realizations of one noise level. They show performance for the specified FHN model, observation times, and fixed initialization. Other noise levels, observation patterns, or initializations would require separate trials.
+
+\clearpage
+
+\subsection{What this section contributes, and where it stops}
+\label{sec:bonus-value}
+
+\begin{table}[H]
+  \centering
+  \caption{What the bonus study delivers, and where each item is evidenced.}
+  \label{tab:bonus-map}
+  \small
+  \begin{tabular}{@{}p{0.27\linewidth}p{0.66\linewidth}@{}}
+    \toprule
+    Element & Where, and what was actually done\\
+    \midrule
+    Advanced numerics &
+      Automatic differentiation supplies exact derivatives of the network at 241 collocation
+      times; a three-stage schedule of 400 data-only steps, 1800 joint Adam steps and up to 300
+      L-BFGS iterations with strong-Wolfe line search. The hard-constraint ansatz
+      \((v_0,w_0)+(1-e^{-t})N_\theta(t)\) satisfies the initial condition exactly rather than by
+      penalty, removing a loss term and its weight.\\[0.35em]
+    Machine learning &
+      A physics-informed network estimates the unknown parameter as a trainable weight while
+      learning the state curves, from voltage observations alone with \(w\) hidden.\\[0.35em]
+    Validation &
+      Each fitted parameter is scored on \emph{held-out trajectories at currents never seen in
+      training}: validation at \(I=0.65\) and a final test at \(I=0.90\), both from different
+      initial states, re-integrated with the ODE solver. Both methods reproduce the correct spike
+      count on the held-out run.\\[0.35em]
+    Controlled experiment &
+      The first benchmark confounded noise with sample count. Section~\ref{sec:controlled}
+      replaces it with a paired design: two clean datasets and ten noisy ones (two densities
+      \(\times\) five noise seeds), sparse readings copied from the dense ones at shared times,
+      one fixed network initialisation. Each of the twelve datasets is fitted by both methods,
+      giving twenty-four fits, reported in full.\\[0.35em]
+    Interpretation &
+      The negative result is explained rather than reported: the baseline is identified as the
+      empirical reference for this synthetic experiment, so the PINN's distance from it is
+      the quantity of interest.\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\paragraph{Proposed follow-up experiments.}
+The baseline's advantage here rests on three assumptions: the model is correct, the initial state
+is known, and the unknowns are finitely many scalars. Each can be relaxed, and doing so is the
+natural continuation of this study. We have not run these experiments; we set them out as the
+tests that would determine whether the ordering above survives.
+
+\begin{itemize}[leftmargin=1.4em]
+  \item \textbf{Unknown forcing.} If \(I(t)\) is an unknown \emph{function} rather than a
+        constant, a second network head could estimate it pointwise, whereas the baseline would
+        first have to assume a parametric form. Whether that changes the ordering is untested.
+  \item \textbf{Unknown initial state.} Here both methods were given \(w_0\). In a recording it
+        is unobservable, and the baseline would have to search over it too. The experiment is to
+        withhold \(w_0\) from both and re-measure the gap.
+  \item \textbf{Model misspecification.} With a deliberately wrong right-hand side, the question
+        is whether the network's physics residual grows in a way that diagnoses the error while
+        the baseline absorbs it into the fitted parameter.
+  \item \textbf{Expensive forward solves.} For a spatially extended version of these equations,
+        the cost of re-integrating a PDE inside the optimiser at every trial parameter would need
+        to be compared against the cost of the collocation formulation.
+\end{itemize}
+
+\paragraph{Limitations, stated plainly.}
+All observations are synthetic. That is deliberate --- the true
+parameter is known only for synthetic data and therefore to measure error rather than merely report a fit --- but it means the
+study demonstrates method behaviour, not biological fidelity. It uses one noise level, five noise
+realisations, one network initialisation and one unknown parameter. Fitting a published
+patch-clamp recording, estimating several parameters jointly, and sweeping the noise level to look
+for a crossover are the natural continuations, and none of them is addressed here.

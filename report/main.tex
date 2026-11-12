@@ -6,6 +6,8 @@
 \usepackage{microtype}
 \usepackage{amsmath,amssymb}
 \usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage[numbers,sort&compress]{natbib}
 \usepackage{graphicx,float,caption}
 \usepackage{xcolor}
 \usepackage{fancyhdr}
@@ -31,6 +33,16 @@
 \fancyfoot[C]{\small\color{reportink}\thepage}
 \renewcommand{\headrulewidth}{0.4pt}
 
+% ---------------------------------------------------------------------------
+%  GROUP MEMBERS.  Edit only here; the title block reads from these macros.
+% ---------------------------------------------------------------------------
+\newcommand{\memberA}{Bhagyesh Kamal}
+\newcommand{\memberB}{Jaivin Bengani}
+\newcommand{\memberC}{Purunjay Karwa}
+\newcommand{\memberD}{Arnav Kulshreshtha}
+\newcommand{\memberE}{Soham Agrawal}
+\newcommand{\memberF}{Samar Nayak}
+
 \begin{document}
 
 {\color{reportaccent}\small\bfseries MATHEMATICAL MODELLING GROUP PROJECT \enspace MAC F314\par}
@@ -39,7 +51,12 @@
 with the FitzHugh--Nagumo model\par}
 \vspace{0.35em}
 {\large Equilibria, bifurcations, numerical simulation, and sensitivity\par}
-% Add the group members' names and roll numbers here for submission.
+\vspace{0.5em}
+{\small
+\begin{tabular}{@{}lll@{}}
+\memberA & \memberC & \memberE\\
+\memberB & \memberD & \memberF\\
+\end{tabular}\par}
 
 \vspace{0.7em}
 \noindent\textcolor{reportaccent}{\rule{\linewidth}{1pt}}
@@ -50,7 +67,7 @@ We use the FitzHugh--Nagumo model to reproduce rest, a single spike, and repeate
 
 \section{Introduction and motivation}
 
-A brief electrical disturbance can produce a voltage spike followed by recovery. A suitable sustained current can produce repeated firing. The FitzHugh--Nagumo model represents both responses with fast voltage and slower recovery variables. Its two-dimensional phase plane lets us relate simulated trajectories to equilibrium and stability calculations \cite{fitzhugh1961,nagumo1962}.
+A brief electrical disturbance can produce a voltage spike followed by recovery. A suitable sustained current can produce repeated firing. The FitzHugh--Nagumo model represents both responses with fast voltage and slower recovery variables. Its two-dimensional phase plane lets us relate simulated trajectories to equilibrium and stability calculations \cite{fitzhugh1961,nagumo1962}. Excitable systems of this form are treated as a standard topic in mathematical biology by Edelstein-Keshet \cite{edelsteinkeshet2005}, and the modelling strategy of reducing a detailed mechanism to the smallest system that still reproduces the behaviour of interest follows Dym \cite{dym2004}.
 
 \subsection*{Objectives}
 
@@ -70,8 +87,6 @@ We model one spatially uniform excitable cell. The state and time are scaled, an
 \end{align}
 
 Here \(v\) is scaled voltage, \(w\) is recovery, \(I\) is applied current, and a dot denotes a time derivative. Higher recovery lowers the voltage slope through \(-w\), while higher voltage raises the recovery slope. The small factor \(\varepsilon\) slows recovery on the time scale of a spike.
-
-\clearpage
 
 \section{Mathematical analysis}
 
@@ -112,6 +127,30 @@ Its trace and determinant are
 \end{equation}
 The eigenvalues solve \(\lambda^2-T\lambda+D=0\). Negative real parts imply local asymptotic stability. A positive real part implies instability. With our parameters, \(D=\varepsilon(1-b+bv_*^2)>0\), so away from \(T=0\) the sign of the trace determines whether the equilibrium is stable or unstable. The Jacobian predicts the initial response to a small nudge. A larger nudge can explore regions of the phase plane where the linear approximation is inaccurate.
 
+\subsection{A numerically checked region around the resting state}
+\label{sec:lyapunov}
+
+The Jacobian establishes that \emph{sufficiently small} disturbances decay, without saying how small. A quadratic Lyapunov function lets us attach a number to it. At the zero-current equilibrium $A=J(v_*)$ is Hurwitz, so the Lyapunov matrix equation $A^{\mathsf{T}}P+PA=-Q$ with $Q=\mathbb{I}$ has a unique positive-definite solution,
+\begin{equation}
+  P=\begin{pmatrix}1.091492 & -0.266174\\ -0.266174 & 11.971474\end{pmatrix},
+  \qquad \lambda(P)=\{1.08498,\;11.97798\}.
+  \label{eq:lyapP}
+\end{equation}
+Write $z=(v-v_*,\,w-w_*)^{\mathsf{T}}$ and $V(z)=z^{\mathsf{T}}Pz$. Differentiating along the \emph{full nonlinear} system $\dot z=Az+g(z)$, with $g(z)=(-v_*z_1^2-z_1^3/3,\,0)^{\mathsf{T}}$ collecting the quadratic and cubic terms,
+\begin{equation}
+  \dot V=-\lVert z\rVert^2+2\,(Pz)_1\Bigl(-v_*z_1^2-\tfrac{z_1^3}{3}\Bigr).
+  \label{eq:Vdot}
+\end{equation}
+If $\dot V$ were negative on the whole of a sublevel set $\{V\le c\}$ away from the origin, that set would be forward invariant and contained in the basin of attraction. We do not establish that analytically here. Instead we search outward along rays for the level at which $\dot V$ first reaches zero, step back to a level below it, and sample. On
+\begin{equation}
+  \Omega=\{z:V(z)\le 0.2059\},
+  \label{eq:lyapset}
+\end{equation}
+evaluating $\dot V$ at $4\times10^5$ points of the boundary and on $400$ interior level sets, the largest value found is $-4.05\times10^{-6}$. We therefore report $\Omega$ as a \emph{numerically checked region}: at every point sampled, $\dot V$ is negative. Along the voltage axis, the numerically checked region reaches a displacement of $0.43433$, which is $78.2\%$ of the displacement $0.5555$ at which the chosen spike criterion is met (Section~\ref{sec:threshold}). The $+0.05$ displacement used in Section~\ref{sec:runs} has $V=0.002729$, well inside $\Omega$.
+
+The limits of this are worth stating precisely. A grid establishes the sign of $\dot V$ at the points sampled; it does not establish it between them, so we do not claim that $\dot V<0$ everywhere in $\Omega$, nor that every trajectory starting in $\Omega$ returns to rest. The margin $-4.05\times10^{-6}$ is small, and the level is a numerical estimate rather than a proof that no larger one works. Converting this into a guarantee needs a bound on $\dot V$ between sample points --- a Lipschitz estimate on $\dot V$ over $\Omega$ combined with the sample spacing would do it --- and that is the natural next step.
+
+
 \clearpage
 
 \subsection{Locating and classifying the Hopf bifurcations}
@@ -142,7 +181,7 @@ Use \(X=x\), \(Y=(y-px)/\omega\), and \(\tau=\omega t\) to put the linear part i
   X'=-Y+f(X),\qquad Y'=X+g(X),\qquad
   f=F/\omega,\quad g=-pF/\omega^2.
 \]
-The planar coefficient formula simplifies because \(f\) and \(g\) depend only on \(X\). At the origin, \(f_{XXX}=-2/\omega\), \(f_{XX}=-2v_H/\omega\), and \(g_{XX}=2pv_H/\omega^2\). Substitution gives
+The planar coefficient formula \cite{guckenheimer1983} simplifies because \(f\) and \(g\) depend only on \(X\). At the origin, \(f_{XXX}=-2/\omega\), \(f_{XX}=-2v_H/\omega\), and \(g_{XX}=2pv_H/\omega^2\). Substitution gives
 \begin{equation}
   \ell_1=\frac{f_{XXX}-f_{XX}g_{XX}}{16}
         =-\frac{1}{8\omega}+\frac{pv_H^2}{4\omega^3}
@@ -178,6 +217,7 @@ For the displayed firing traces, we counted upward crossings of \(v=0\), estimat
 \section{Simulation results}
 
 \subsection{Small nudge, single spike, and sustained firing}
+\label{sec:runs}
 
 At \(I=0\), the equilibrium is approximately \((v_*,w_*)=(-1.1994,-0.6243)\). All three experiments start with recovery \(w_*\) from this equilibrium. Table~\ref{tab:runs} gives the initial voltage offsets and the applied currents.
 
@@ -204,6 +244,32 @@ At \(I=0\), the equilibrium is approximately \((v_*,w_*)=(-1.1994,-0.6243)\). Al
 \end{figure}
 
 The small nudge decays quickly. The larger nudge gives a single large excursion and returns to the same resting voltage. These two runs have identical parameters and applied current, so their difference demonstrates excitability driven by the initial state. The sustained input keeps producing spikes because it changes the rates at every time during the run.
+
+\subsection{Locating the firing threshold}
+\label{sec:threshold}
+
+The two zero-current runs differ only in their initial voltage, so excitability is a statement about a boundary between them. We locate it by holding the recovery variable at $w_*$, displacing only the voltage, and bisecting on the displacement; the peak voltage over the run separates the two outcomes without any tuning, because a decaying run stays far below $v=1$ while a spike overshoots well past it.
+
+\begin{table}[H]
+  \centering
+  \caption{The firing threshold at $I=0$, from 45 bisection steps.}
+  \label{tab:threshold}
+  \small
+  \begin{tabular}{@{}lr@{}}
+    \toprule
+    Quantity & Value\\
+    \midrule
+    Critical voltage displacement from rest & $0.5555$\\
+    Threshold voltage $v_{\mathrm{thresh}}$ & $-0.6439$\\
+    Middle branch of the cubic nullcline at $w=w_*$ & $-0.7863$\\
+    Peak voltage $0.001$ below the threshold & $-0.3341$\\
+    Peak voltage $0.001$ above the threshold & $+1.5887$\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+Table~\ref{tab:threshold} reports the threshold measured at $I=0$, with the recovery variable held at its resting value $w_*$ and a peak above $v=1$ taken as the spike criterion. At two test displacements, $0.001$ below and $0.001$ above the estimated threshold, the peak voltage is $-0.3341$ and $+1.5887$ respectively, so peak voltage changes sharply over a narrow band of initial conditions. The located threshold sits $0.1424$ voltage units to the \emph{right} of the middle branch of the cubic nullcline at $w=w_*$, which lies at $-0.7863$. The middle branch is the $\varepsilon\to0$ description of the dividing set; at $\varepsilon=0.08$ the measured threshold and that branch differ by a resolvable amount, which is consistent with the scaling evidence in Section~\ref{sec:scaling}. Bisection locates where the spike criterion changes value; it does not by itself establish that the underlying response is discontinuous, nor identify the dividing set.
+
 
 \clearpage
 
@@ -304,13 +370,43 @@ With \(I=0.50\) and the same starting state, we changed only \(\varepsilon\). We
 
 Faster recovery reduced the average interval between spikes across the tested range. The mean period decreased by about \(32\%\) between the first and last settings. This comparison describes one current and three recovery settings.
 
+\subsection{Scaling of the period with the recovery rate}
+\label{sec:scaling}
+
+The slow--fast structure of the model predicts how large that effect should be. A firing cycle spends almost all of its time traversing the outer branches of the cubic nullcline, where motion is governed by \eqref{eq:recovery} and therefore proceeds at a rate proportional to \(\varepsilon\); the two transitions between branches are governed by \eqref{eq:voltage} and take \(O(1)\) time. In the singular limit this gives \(T\propto\varepsilon^{-1}\), equivalently \(\varepsilon T\to\text{constant}\). We tested this by widening the sweep by more than an order of magnitude.
+
+\begin{table}[H]
+  \centering
+  \caption{Mean firing period at \(I=0.50\) over a wider range of recovery rates, measured after discarding the first 1000 time units.}
+  \label{tab:scaling}
+  \small
+  \begin{tabular}{@{}rrr@{}}
+    \toprule
+    \(\varepsilon\) & Mean period \(T\) & \(\varepsilon T\)\\
+    \midrule
+    0.005 & 430.745 & 2.1537\\
+    0.010 & 226.648 & 2.2665\\
+    0.020 & 122.113 & 2.4423\\
+    0.040 & \ 67.951 & 2.7180\\
+    0.060 & \ 49.157 & 2.9494\\
+    0.080 & \ 39.474 & 3.1580\\
+    0.100 & \ 33.525 & 3.3525\\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+The product \(\varepsilon T\) rises steadily from \(2.15\) to \(3.35\), so it has not reached a constant over the range tested. Fitting \(T\propto\varepsilon^{-\alpha}\) on log--log axes gives \(\alpha=0.909\) over \(\varepsilon\in[0.005,0.02]\) and \(\alpha=0.750\) over \(\varepsilon\in[0.06,0.10]\). The exponent is larger over the smaller-\(\varepsilon\) window and closer to \(1\) there, and \(\varepsilon T\) varies by only a factor of \(1.6\) while \(T\) itself varies by a factor of \(13\). Both observations are consistent with the slow--fast prediction \(T\sim C/\varepsilon\) holding asymptotically. They do not demonstrate convergence: the sweep stops at \(\varepsilon=0.005\), and over this range the \(O(1)\) transition time remains a visible fraction of the cycle. At \(\varepsilon=0.08\) in particular the asymptotic regime has not been reached, so the \(32\%\) reduction reported above is a correct measurement taken in a pre-asymptotic regime, and the inverse law should not be quoted as exact at these parameters.
+
+The two tables give slightly different periods at \(\varepsilon=0.08\): \(39.475\) in Table~\ref{tab:sensitivity} against \(39.474\) in Table~\ref{tab:scaling}. The runs use different measurement windows and output sampling --- Table~\ref{tab:sensitivity} integrates to time \(450\), samples every \(0.1\) time units and discards crossings before time \(150\), while Table~\ref{tab:scaling} discards the first \(1000\) time units --- so the two averages are taken over different sets of cycles and locate each crossing on a different grid. The difference of \(0.001\) time units, around \(3\times10^{-5}\) of the period, is the size expected from that alone.
+
+
 \input{bonus}
 
 \clearpage
 
 \section{Conclusion and limitations}
 
-The FitzHugh--Nagumo model reproduced three distinct responses by changing the initial voltage or the sustained current. Equilibrium and Jacobian calculations explained when small disturbances decayed or grew. The first Lyapunov coefficient classified both stability crossings as subcritical Hopf bifurcations. The refined runs showed that the initial state can matter near either crossing. At the tested current, increasing the recovery rate shortened the firing period.
+The FitzHugh--Nagumo model reproduced three distinct responses by changing the initial voltage or the sustained current. Equilibrium and Jacobian calculations explained when small disturbances decayed or grew, and a Lyapunov function built from \eqref{eq:lyapP} attached a number to the decay of the small disturbance, giving a numerically checked region that reaches voltage displacements of \(0.43433\) against a measured threshold of \(0.5555\). The first Lyapunov coefficient classified both stability crossings as subcritical Hopf bifurcations. The refined runs showed that the initial state can matter near either crossing. At the tested current, increasing the recovery rate shortened the firing period; widening that sweep gave a fitted exponent in \(T\propto\varepsilon^{-\alpha}\) of \(0.750\) over the tested range and \(0.909\) over the smallest decade, consistent with the slow--fast prediction \(T\sim C/\varepsilon\) holding asymptotically rather than at these parameters.
 
 The variables are scaled, so comparing the curves to a particular neuron would require calibration against measured voltage, time, and current. The late-time simulations sample selected currents and initial states. A full description of periodic branches and their stability would require additional analysis. The core Jupyter notebook regenerates the simulations and exports the core figures.
 
@@ -318,11 +414,12 @@ In the controlled inverse study, noise increased the held-out error for both met
 
 \subsection*{Reproducibility}
 
-The core notebook derives and evaluates \eqref{eq:hopf-coefficient} and regenerates the current-sweep figure. The executed bonus notebook (\texttt{fhn\_pinn\_ml.ipynb}) contains both benchmarks. The controlled Colab CPU run used PyTorch 2.14.1, SymPy 1.14.0, SciPy 1.16.3, and Matplotlib 3.10.0. Step~12 uses observation seeds 2026--2030 and network seed 7. Its export contains all 24 rows in \texttt{pinn\_controlled\_trials.csv}, the summary table, and the figure in PDF and EPS.
+The core notebook derives and evaluates \eqref{eq:hopf-coefficient}, regenerates the current-sweep figure, and reproduces the threshold of Table~\ref{tab:threshold}, the numerically checked region of Section~\ref{sec:lyapunov} and the scaling table of Table~\ref{tab:scaling} in its sections 11--13. The executed bonus notebook (\texttt{fhn\_pinn\_ml.ipynb}) contains both benchmarks. The controlled Colab CPU run used PyTorch 2.14.1, SymPy 1.14.0, SciPy 1.16.3, and Matplotlib 3.10.0. Step~12 uses observation seeds 2026--2030 and network seed 7. Its export contains all 24 rows in \texttt{pinn\_controlled\_trials.csv}, the summary table, and the figure in PDF and EPS.
 
 \begingroup
-\small
+\footnotesize
 \setlength{\parskip}{0pt}
+\setlength{\bibsep}{0.1em}
 \bibliographystyle{unsrt}
 \bibliography{references}
 \endgroup

@@ -1,4 +1,12 @@
-scipy==1.15.3
-matplotlib==3.10.3
+# Core notebook (fhn_project.ipynb) — runs on CPU, no GPU needed.
+numpy==2.3.4
+scipy==1.16.3
+matplotlib==3.10.0
 jupyterlab==4.5.7
 ipykernel==6.29.5
+
+# Bonus notebook only (fhn_pinn_ml.ipynb).
+# The recorded Colab CPU run used torch 2.14.1+cpu; the published wheel for
+# that release is 2.14.1, which is what pip resolves here.
+torch==2.14.1
+sympy==1.14.0

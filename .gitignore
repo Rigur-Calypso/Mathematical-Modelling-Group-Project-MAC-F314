@@ -4,3 +4,14 @@ __pycache__/
 .DS_Store
 /.agents/
 /Mathematical_Modeling_project_instructions (1).pdf
+
+# LaTeX build artefacts
+*.aux
+*.bbl
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.toc
+report/main.pdf
